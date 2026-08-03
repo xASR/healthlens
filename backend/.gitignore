@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+*.db
+firebase-service-account.json
+app/ml/artifacts/*.joblib
+.pytest_cache/
+.venv/
+venv/
