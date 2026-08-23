@@ -6,12 +6,13 @@ into app/ml/artifacts/. This module does NOT train anything -- it only
 loads and predicts. Keeping training and serving separate means you can
 retrain/swap a model without touching the API.
 
-Expected artifact files (produced in Week 3-4, not present yet):
-    app/ml/artifacts/diabetes_model.joblib
-    app/ml/artifacts/heart_disease_model.joblib
-
-Each artifact should be the full sklearn Pipeline (preprocessing + estimator)
-so this module never has to reimplement scaling/encoding logic.
+Artifact contract: we save the RAW tree estimator (RandomForestClassifier
+or XGBClassifier), not wrapped in a sklearn Pipeline. Two reasons: tree
+models need no feature scaling, and shap.TreeExplainer (see explainer.py)
+requires the raw estimator directly -- it cannot introspect through a
+Pipeline wrapper. If a future model needs preprocessing (e.g. a logistic
+regression baseline), that preprocessing must happen in _to_feature_frame
+below, not inside the saved artifact.
 """
 import logging
 import os
@@ -26,20 +27,15 @@ logger = logging.getLogger(__name__)
 ARTIFACTS_DIR = os.path.join(os.path.dirname(__file__), "artifacts")
 
 # Column order the model pipelines expect. This MUST match the training
-# notebook's feature engineering exactly -- treat it as a contract between
+# script's feature engineering exactly -- treat it as a contract between
 # ml-notebooks/ and this file. Update both together.
+#
+# Diabetes model is trained on the Pima Indians Diabetes Dataset, which
+# covers only female patients 21+. "pregnancies" is asked only for female
+# users in the questionnaire and defaults to 0 for male users -- a
+# documented dataset limitation, not an oversight (see ml-notebooks/README.md).
 FEATURE_ORDER = {
-    "diabetes": [
-        "age",
-        "bmi",
-        "glucose",
-        "systolic_bp",
-        "diastolic_bp",
-        "cholesterol_total",
-        "smoker",
-        "physically_active",
-        "family_history",
-    ],
+    "diabetes": ["pregnancies", "glucose", "diastolic_bp", "bmi", "age"],
     "heart_disease": [
         "age",
         "sex",
@@ -86,6 +82,12 @@ def _to_feature_frame(condition: str, input_data: dict) -> pd.DataFrame:
     row["family_history"] = int(bool(row.get("family_history", False)))
     if "sex" in row:
         row["sex"] = 1 if row["sex"] == "male" else 0
+    # Diabetes model trained on the Pima dataset (female patients only).
+    # "pregnancies" is only collected from female users in the frontend;
+    # male users implicitly get 0. This is a documented dataset limitation
+    # (see ml-notebooks/README.md), not silent data fabrication.
+    if condition == "diabetes":
+        row.setdefault("pregnancies", 0)
 
     columns = FEATURE_ORDER[condition]
     ordered = {col: row[col] for col in columns if col in row}

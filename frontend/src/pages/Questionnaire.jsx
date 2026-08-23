@@ -11,6 +11,7 @@ const initialForm = {
   diastolic_bp: "",
   glucose: "",
   cholesterol_total: "",
+  pregnancies: "0",
   smoker: false,
   physically_active: true,
   family_history: false,
@@ -48,6 +49,7 @@ export default function Questionnaire() {
         diastolic_bp: Number(form.diastolic_bp),
         glucose: Number(form.glucose),
         cholesterol_total: Number(form.cholesterol_total),
+        pregnancies: form.sex === "female" ? Number(form.pregnancies || 0) : 0,
       };
       const result = await submitAssessment(payload);
       navigate(`/results/${result.assessment_id}`, { state: result });
@@ -99,6 +101,27 @@ export default function Questionnaire() {
             <option value="male">Male</option>
           </select>
         </div>
+
+        {form.condition === "diabetes" && form.sex === "female" && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink">
+              Number of pregnancies
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={form.pregnancies}
+              onChange={(e) => update("pregnancies", e.target.value)}
+              className="w-full rounded-md border border-teal-100 bg-white px-3 py-2 focus:border-teal-400"
+            />
+            <p className="mt-1 text-xs text-teal-700">
+              Our diabetes model is trained on a dataset of female patients,
+              where this is a known predictive factor. Enter 0 if not
+              applicable.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           {Object.entries(numericFields).map(([field, cfg]) => (

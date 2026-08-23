@@ -43,9 +43,19 @@ def explain(condition: str, feature_frame: pd.DataFrame) -> list[dict]:
     explainer = _get_explainer(condition)
     shap_values = explainer.shap_values(feature_frame)
 
-    # For binary classifiers, shap_values may come back as a list
-    # [class_0_values, class_1_values] -- we want the "at risk" class (1).
-    values = shap_values[1][0] if isinstance(shap_values, list) else shap_values[0]
+    # SHAP's return shape has changed across versions and explainer modes:
+    #   - older versions: a list [class_0_values, class_1_values], each
+    #     shaped (n_samples, n_features)
+    #   - current TreeExplainer on a binary classifier: a single ndarray
+    #     shaped (n_samples, n_features, n_classes)
+    #   - single-output case: ndarray shaped (n_samples, n_features)
+    # We always want the "at risk" class (index 1) for one sample (index 0).
+    if isinstance(shap_values, list):
+        values = shap_values[1][0]
+    elif shap_values.ndim == 3:
+        values = shap_values[0, :, 1]
+    else:
+        values = shap_values[0]
 
     contributions = [
         {

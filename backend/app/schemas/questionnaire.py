@@ -20,6 +20,11 @@ class QuestionnaireInput(BaseModel):
     diastolic_bp: int = Field(..., ge=40, le=150, description="mmHg")
     glucose: float = Field(..., ge=40, le=500, description="mg/dL, fasting")
     cholesterol_total: float = Field(..., ge=100, le=400, description="mg/dL")
+    pregnancies: int = Field(
+        0, ge=0, le=20,
+        description="Diabetes model was trained on a female-only dataset; "
+        "collected for female users only, defaults to 0 otherwise.",
+    )
 
     # Lifestyle factors -- keep these as simple booleans/ordinal scales so
     # they map cleanly onto model features later.
