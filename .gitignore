@@ -14,7 +14,7 @@ dist/
 firebase-service-account.json
 
 # ML artifacts (large binaries, don't belong in git)
-backend/app/ml/artifacts/*.joblib
+# backend/app/ml/artifacts/*.joblib
 
 # OS
 .DS_Store
