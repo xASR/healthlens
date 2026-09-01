@@ -6,12 +6,15 @@ small enough that anyone cloning this repo can re-run
 download steps.
 
 Larger or less clearly-licensed datasets (e.g. the UCI Heart Disease
-dataset, once that work starts) should stay out of git and follow a
-download-it-yourself pattern instead — `raw/` and `processed/` remain
-gitignored by default for anything you don't explicitly force-add.
+dataset) stay out of git and follow a download-it-yourself pattern
+instead — `raw/` and `processed/` remain gitignored by default for
+anything you don't explicitly force-add.
 
 - `raw/pima_diabetes.csv` — Pima Indians Diabetes Dataset (committed)
-- `raw/uci_heart_disease.csv` — UCI Heart Disease Dataset (not yet added — download when starting that model)
+- `raw/uci_heart_disease.csv` — UCI Heart Disease Dataset, Cleveland
+  Clinic subset (gitignored — run `python ml-notebooks/download_heart_data.py`
+  from the repo root once to fetch it; source:
+  https://archive.ics.uci.edu/dataset/45/heart+disease)
 
 `processed/` is where cleaned/feature-engineered versions go, produced by
 the notebooks in `ml-notebooks/`.

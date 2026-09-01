@@ -1,0 +1,71 @@
+{
+  "winner": "RandomForest",
+  "features": [
+    "age",
+    "sex",
+    "chest_pain_type",
+    "systolic_bp",
+    "cholesterol_total",
+    "fbs",
+    "exercise_angina"
+  ],
+  "results": {
+    "LogisticRegression": {
+      "cv_roc_auc_mean": 0.8264,
+      "cv_roc_auc_std": 0.0255,
+      "test_roc_auc": 0.8755,
+      "test_accuracy": 0.7705,
+      "test_precision": 0.75,
+      "test_recall": 0.75,
+      "test_f1": 0.75,
+      "confusion_matrix": [
+        [
+          26,
+          7
+        ],
+        [
+          7,
+          21
+        ]
+      ]
+    },
+    "RandomForest": {
+      "cv_roc_auc_mean": 0.8342,
+      "cv_roc_auc_std": 0.0274,
+      "test_roc_auc": 0.895,
+      "test_accuracy": 0.8525,
+      "test_precision": 0.8276,
+      "test_recall": 0.8571,
+      "test_f1": 0.8421,
+      "confusion_matrix": [
+        [
+          28,
+          5
+        ],
+        [
+          4,
+          24
+        ]
+      ]
+    },
+    "XGBoost": {
+      "cv_roc_auc_mean": 0.7901,
+      "cv_roc_auc_std": 0.041,
+      "test_roc_auc": 0.8506,
+      "test_accuracy": 0.7377,
+      "test_precision": 0.7143,
+      "test_recall": 0.7143,
+      "test_f1": 0.7143,
+      "confusion_matrix": [
+        [
+          25,
+          8
+        ],
+        [
+          8,
+          20
+        ]
+      ]
+    }
+  }
+}

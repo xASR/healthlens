@@ -35,6 +35,12 @@ def create_assessment(
         # Expected until Week 3-4 model training is complete -- surfaced as
         # a clean 503 rather than a stack trace.
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except ValueError as exc:
+        # e.g. chest_pain_type omitted for a heart_disease request -- it's
+        # optional in the shared schema (see schemas/questionnaire.py) but
+        # required per-condition, so that check happens here, not at the
+        # pydantic layer. Surfaced as a clean 422, not a 500.
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
 
     recommendations = build_recommendations(
         payload.condition, prediction["risk_label"], top_factors

@@ -84,6 +84,21 @@ RULES: dict[str, list[dict]] = {
             ],
         }
     ],
+    # Heart disease model only. exercise_angina is stored as 0/1 (see
+    # predictor.py), so it fits the same numeric trigger_if mechanism as
+    # the others despite being boolean -- v >= 1 means "yes".
+    "exercise_angina": [
+        {
+            "trigger_if": lambda v: v >= 1,
+            "diet": [],
+            "exercise": [
+                "Stop and rest immediately if you feel chest pain, "
+                "pressure, or tightness during activity -- don't push "
+                "through it. Avoid unsupervised vigorous exercise until "
+                "a doctor has evaluated this symptom.",
+            ],
+        }
+    ],
 }
 
 SPECIALISTS: dict[Condition, dict[str, str]] = {
