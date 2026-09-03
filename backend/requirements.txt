@@ -8,7 +8,7 @@ pydantic-settings==2.5.2
 
 # --- Database ---
 sqlalchemy==2.0.35
-# psycopg2-binary==2.9.9   # uncomment for PostgreSQL in production
+psycopg2-binary==2.9.9   # PostgreSQL driver, used in production (Neon)
 
 # --- Auth ---
 firebase-admin==6.5.0
