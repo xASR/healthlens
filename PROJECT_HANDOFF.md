@@ -54,8 +54,30 @@ explainability (shows *why* a result came out the way it did, not just a score)
     the actual API route and a passing sanity check (low-risk < high-risk)
 - ✅ **Frontend (React + Vite + Tailwind):** all pages built (Login, Register,
   Questionnaire, Results, Dashboard), builds clean with `npm run build`.
-- ⬜ **Not done yet:** real Firebase project connected, live deployment,
-  full E2E/UI test coverage, technical report.
+- ✅ **Real Firebase project connected and verified live, not just configured:**
+  Email/Password auth enabled, `frontend/.env` and
+  `backend/firebase-service-account.json` in place (both gitignored, per
+  usual). Manually verified end-to-end on a real machine (not just this
+  sandbox): register → login → submit assessment → view result → view
+  dashboard history → download PDF report, all working through the actual
+  UI, not just curl/pytest.
+- ✅ **Two real bugs found and fixed during that manual verification pass**
+  (both were latent since before this session — no API-level tests existed
+  to catch them, see roadmap #2 below):
+  - `GET /history` and `/history/{id}` 500'd on every call
+    (`ResponseValidationError`) — `AssessmentHistoryItem.assessment_id` had
+    no mapping to the DB model's actual `id` column. Fixed via
+    `Field(validation_alias="id")`. Regression tests added:
+    `backend/tests/test_history.py`.
+  - The Results page's "Download PDF" button was a plain `<a href>` to an
+    authenticated route — browser link navigation can't attach the bearer
+    token, so it 401'd every time. Fixed by fetching the PDF as an
+    authenticated blob (`downloadReport` in `frontend/src/api/client.js`)
+    instead of linking directly.
+- ⬜ **Not done yet:** live deployment, full E2E/UI test coverage (API-level
+  coverage is partial now — `/history` has real tests, `/assessments` and
+  `/auth/sync` still only have manual verification, not committed tests),
+  technical report.
 
 ## 3. Key decisions already made — don't relitigate these without a reason
 
@@ -102,7 +124,8 @@ healthlens/
 │   ├── ml/artifacts/       diabetes_model.joblib, heart_disease_model.joblib
 │   ├── recommendations/  rule engine — keys off whatever features the model used
 │   └── db/, schemas/, api/, core/
-├── backend/tests/         16 tests, incl. 10 against the REAL trained models
+├── backend/tests/         19 tests, incl. 10 against the REAL trained models
+│                          and 3 API-level tests against /history
 ├── ml-notebooks/          diabetes_model_training.ipynb, heart_disease_model_training.ipynb
 │                          (both executed, real plots) + download_heart_data.py
 ├── frontend/src/pages/    Login, Register, Questionnaire, Results, Dashboard
@@ -111,13 +134,13 @@ healthlens/
 
 ## 5. Roadmap — what's left, in priority order
 
-1. **Real Firebase project** — create at console.firebase.google.com, enable
-   Email/Password auth, drop config into `frontend/.env` and
-   `backend/firebase-service-account.json`.
-2. **Full test coverage** — unit tests exist; still need API-level tests
-   (Postman/pytest+httpx against live routes) and basic frontend E2E.
-3. **Deployment** — backend → Render, frontend → Vercel.
-4. **Technical report** — should incorporate both notebooks' honest
+1. **Full test coverage** — `/history` now has real API-level tests
+   (`backend/tests/test_history.py`); `/assessments` and `/auth/sync` still
+   only have manual verification, not committed tests. Given the bugs
+   already found this way, prioritize this over polish elsewhere. Frontend
+   E2E still not started.
+2. **Deployment** — backend → Render, frontend → Vercel.
+3. **Technical report** — should incorporate both notebooks' honest
    limitations sections (population bias, feature tradeoffs), not just
    describe features.
 
