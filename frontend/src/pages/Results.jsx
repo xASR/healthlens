@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
-import { fetchAssessment, downloadReportUrl } from "../api/client";
+import { fetchAssessment, downloadReport } from "../api/client";
 
 const RISK_COLORS = {
   low: "text-risk-low border-risk-low",
@@ -17,6 +17,7 @@ export default function Results() {
   const [data, setData] = useState(location.state || null);
   const [loading, setLoading] = useState(!location.state);
   const [error, setError] = useState("");
+  const [downloadError, setDownloadError] = useState("");
 
   useEffect(() => {
     if (data) return;
@@ -25,6 +26,13 @@ export default function Results() {
       .catch(() => setError("Couldn't load this assessment."))
       .finally(() => setLoading(false));
   }, [id, data]);
+
+  const handleDownload = () => {
+    setDownloadError("");
+    downloadReport(data.assessment_id).catch(() =>
+      setDownloadError("Couldn't download the PDF. Please try again.")
+    );
+  };
 
   if (loading) return <p className="p-10 text-teal-700">Loading results...</p>;
   if (error) return <p className="p-10 text-risk-high">{error}</p>;
@@ -98,12 +106,13 @@ export default function Results() {
       </p>
 
       <div className="flex gap-3">
-        <a
-          href={downloadReportUrl(data.assessment_id)}
+        <button
+          type="button"
+          onClick={handleDownload}
           className="rounded-md border border-teal-600 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
         >
           Download PDF
-        </a>
+        </button>
         <Link
           to="/dashboard"
           className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
@@ -111,6 +120,9 @@ export default function Results() {
           View dashboard
         </Link>
       </div>
+      {downloadError && (
+        <p className="mt-2 text-sm text-risk-high">{downloadError}</p>
+      )}
     </div>
   );
 }
