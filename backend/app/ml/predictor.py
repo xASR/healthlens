@@ -34,19 +34,37 @@ ARTIFACTS_DIR = os.path.join(os.path.dirname(__file__), "artifacts")
 # covers only female patients 21+. "pregnancies" is asked only for female
 # users in the questionnaire and defaults to 0 for male users -- a
 # documented dataset limitation, not an oversight (see ml-notebooks/README.md).
+#
+# Heart disease model is trained on the UCI Heart Disease (Cleveland)
+# dataset, restricted to columns a self-screening user can actually
+# report: age, sex, chest pain type, resting BP, cholesterol, fasting
+# blood sugar, and exercise-induced chest pain. Excludes restecg,
+# thalach, oldpeak, slope, ca, thal -- all outputs of a cardiac workup
+# (stress-test ECG, fluoroscopy, thallium scan) that a screening tool's
+# whole purpose is to tell someone whether they need. See
+# ml-notebooks/README.md for the full rationale and the accuracy
+# tradeoff this costs. "fbs" is not asked directly -- see
+# _to_feature_frame below, it's derived from the "glucose" field already
+# collected for the diabetes model.
 FEATURE_ORDER = {
     "diabetes": ["pregnancies", "glucose", "diastolic_bp", "bmi", "age"],
     "heart_disease": [
         "age",
         "sex",
-        "bmi",
+        "chest_pain_type",
         "systolic_bp",
-        "diastolic_bp",
         "cholesterol_total",
-        "smoker",
-        "physically_active",
-        "family_history",
+        "fbs",
+        "exercise_angina",
     ],
+}
+
+# UCI Cleveland "cp" column encoding -- must match ml-notebooks/train_heart_disease_model.py
+CHEST_PAIN_TYPE_MAP = {
+    "typical_angina": 1,
+    "atypical_angina": 2,
+    "non_anginal_pain": 3,
+    "asymptomatic": 4,
 }
 
 RISK_THRESHOLDS = {"low": 0.33, "moderate": 0.66}  # upper bounds; > 0.66 = high
@@ -66,8 +84,8 @@ def load_model(condition: str):
     if not os.path.exists(path):
         raise ModelNotAvailableError(
             f"No trained model found for '{condition}' at {path}. "
-            "Train it first (see ml-notebooks/02_model_training.ipynb) and "
-            "save the pipeline there with joblib.dump()."
+            f"Train it first (see ml-notebooks/{condition}_model_training.ipynb) "
+            "and save the pipeline there with joblib.dump()."
         )
     logger.info("Loading model for %s from %s", condition, path)
     return joblib.load(path)
@@ -88,6 +106,22 @@ def _to_feature_frame(condition: str, input_data: dict) -> pd.DataFrame:
     # (see ml-notebooks/README.md), not silent data fabrication.
     if condition == "diabetes":
         row.setdefault("pregnancies", 0)
+
+    # Heart disease model: chest_pain_type is a required categorical input
+    # (no sane default -- unlike pregnancies/smoker, guessing a chest-pain
+    # status would fabricate a clinical answer). fbs is derived from the
+    # fasting glucose value already collected, rather than asked as a
+    # separate question -- see FEATURE_ORDER comment above.
+    if condition == "heart_disease":
+        cp = row.get("chest_pain_type")
+        if cp not in CHEST_PAIN_TYPE_MAP:
+            raise ValueError(
+                "chest_pain_type is required for heart_disease and must be "
+                f"one of: {', '.join(CHEST_PAIN_TYPE_MAP)}"
+            )
+        row["chest_pain_type"] = CHEST_PAIN_TYPE_MAP[cp]
+        row["exercise_angina"] = int(bool(row.get("exercise_angina", False)))
+        row["fbs"] = 1 if float(row.get("glucose", 0)) > 120 else 0
 
     columns = FEATURE_ORDER[condition]
     ordered = {col: row[col] for col in columns if col in row}

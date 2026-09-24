@@ -64,5 +64,8 @@ def test_full_pipeline_end_to_end():
 
 
 def test_missing_model_raises_clean_error():
+    # heart_disease is trained now too, so probe a condition that will
+    # never have an artifact instead of hardcoding a model we expect to
+    # eventually exist.
     with pytest.raises(ModelNotAvailableError):
-        predict("heart_disease", HIGH_RISK)
+        predict("nonexistent_condition", HIGH_RISK)

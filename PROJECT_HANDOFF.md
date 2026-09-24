@@ -32,7 +32,7 @@ explainability (shows *why* a result came out the way it did, not just a score)
 - ✅ **Backend (FastAPI):** full app skeleton — auth token verification (Firebase),
   SQLAlchemy models, Pydantic schemas, ML prediction/explanation modules,
   rule-based recommendation engine, PDF export, all REST routes. Boots clean,
-  10/10 pytest tests passing.
+  16/16 pytest tests passing.
 - ✅ **Diabetes model — trained, evaluated, and wired in for real:**
   - Dataset: Pima Indians Diabetes (768 records, NIDDK/UCI)
   - **Feature contract (must not drift):** `['pregnancies', 'glucose', 'diastolic_bp', 'bmi', 'age']`
@@ -41,10 +41,21 @@ explainability (shows *why* a result came out the way it did, not just a score)
   - Artifact saved at `backend/app/ml/artifacts/diabetes_model.joblib`
   - End-to-end verified: predict → SHAP explain → recommend, with a passing
     sanity check (low-risk scores below high-risk)
+- ✅ **Heart disease model — trained, evaluated, and wired in for real:**
+  - Dataset: UCI Heart Disease, Cleveland Clinic subset (303 records)
+  - **Feature contract (must not drift):** `['age', 'sex', 'chest_pain_type', 'systolic_bp', 'cholesterol_total', 'fbs', 'exercise_angina']`
+    — a deliberate 7-of-13 subset; see decision #6 below before changing it
+  - Winner: **RandomForest**, test ROC-AUC **0.895**, 5-fold CV ROC-AUC **0.834**
+  - Full executed notebook with real plots: `ml-notebooks/heart_disease_model_training.ipynb`
+  - Artifact saved at `backend/app/ml/artifacts/heart_disease_model.joblib`
+  - Required two new questionnaire fields (`chest_pain_type`, `exercise_angina`)
+    — added to `schemas/questionnaire.py` and `Questionnaire.jsx`
+  - End-to-end verified: predict → SHAP explain → recommend, incl. through
+    the actual API route and a passing sanity check (low-risk < high-risk)
 - ✅ **Frontend (React + Vite + Tailwind):** all pages built (Login, Register,
   Questionnaire, Results, Dashboard), builds clean with `npm run build`.
-- ⬜ **Not done yet:** heart disease model, real Firebase project connected,
-  live deployment, full E2E/UI test coverage, technical report.
+- ⬜ **Not done yet:** real Firebase project connected, live deployment,
+  full E2E/UI test coverage, technical report.
 
 ## 3. Key decisions already made — don't relitigate these without a reason
 
@@ -54,11 +65,15 @@ explainability (shows *why* a result came out the way it did, not just a score)
    least reliable columns anyway. Documented in `ml-notebooks/README.md`.
 2. **Population bias is real and disclosed, not hidden:** Pima dataset =
    female patients only. `pregnancies` defaults to 0 for male users — a
-   documented approximation, shown in the questionnaire UI itself.
+   documented approximation, shown in the questionnaire UI itself. Same
+   principle applied to heart disease (single-site, 68% male, ages 29-77) —
+   see `ml-notebooks/README.md`'s heart disease limitations section.
 3. **Model artifacts are saved as the RAW estimator, not a sklearn Pipeline.**
    Why: tree models need no scaling, and `shap.TreeExplainer` can't
    introspect through a `Pipeline` wrapper. If you ever swap in a non-tree
-   model, this constraint changes.
+   model, this constraint changes. (LogisticRegression came close but lost
+   to RandomForest on the heart disease comparison too — see
+   `heart_disease_model_metrics.json` — so this hasn't been forced yet.)
 4. **A real bug was found and fixed:** current `shap` versions return a 3D
    ndarray `(samples, features, classes)` from `TreeExplainer`, not the old
    list-of-arrays format. `backend/app/ml/explainer.py` handles both — don't
@@ -67,6 +82,16 @@ explainability (shows *why* a result came out the way it did, not just a score)
    assignment rules) — verified genuinely free (no billing account, free to
    50k MAU). Google Places API was deliberately dropped — it requires
    enabling billing even to stay in its "free" tier.
+6. **Heart disease model excludes restecg, thalach, oldpeak, slope, ca, thal**
+   from the original 13 UCI columns — every one is the *output* of a cardiac
+   workup (stress-test ECG, fluoroscopy, thallium scan), which a screening
+   tool exists to tell someone whether they need. This is the dataset's
+   strongest-predictor group, so it's a real, measured accuracy cost: our
+   7-feature model gets 5-fold CV ROC-AUC 0.834 vs 0.891 for the same model
+   given all 13 columns. `fbs` is trained on the dataset's real column but
+   *derived* in the app from the `glucose` field already collected for
+   diabetes (>120 mg/dL), rather than asked as a separate question. Full
+   rationale and numbers in `ml-notebooks/README.md`.
 
 ## 4. Repo map
 
@@ -74,29 +99,26 @@ explainability (shows *why* a result came out the way it did, not just a score)
 healthlens/
 ├── backend/app/          FastAPI app (see main.py for route registration)
 │   ├── ml/                predictor.py (inference) + explainer.py (SHAP)
-│   ├── ml/artifacts/       diabetes_model.joblib lives here
+│   ├── ml/artifacts/       diabetes_model.joblib, heart_disease_model.joblib
 │   ├── recommendations/  rule engine — keys off whatever features the model used
 │   └── db/, schemas/, api/, core/
-├── backend/tests/         10 tests, incl. 5 against the REAL trained model
-├── ml-notebooks/          diabetes_model_training.ipynb (executed, real plots)
+├── backend/tests/         16 tests, incl. 10 against the REAL trained models
+├── ml-notebooks/          diabetes_model_training.ipynb, heart_disease_model_training.ipynb
+│                          (both executed, real plots) + download_heart_data.py
 ├── frontend/src/pages/    Login, Register, Questionnaire, Results, Dashboard
 └── docs/architecture.md
 ```
 
 ## 5. Roadmap — what's left, in priority order
 
-1. **Heart disease model** — same pattern as diabetes: source UCI Heart
-   Disease dataset, EDA → feature-selection-with-rationale → compare 3
-   models → export. Update `FEATURE_ORDER["heart_disease"]` in
-   `predictor.py` (currently a placeholder, not a verified contract).
-2. **Real Firebase project** — create at console.firebase.google.com, enable
+1. **Real Firebase project** — create at console.firebase.google.com, enable
    Email/Password auth, drop config into `frontend/.env` and
    `backend/firebase-service-account.json`.
-3. **Full test coverage** — unit tests exist; still need API-level tests
+2. **Full test coverage** — unit tests exist; still need API-level tests
    (Postman/pytest+httpx against live routes) and basic frontend E2E.
-4. **Deployment** — backend → Render, frontend → Vercel.
-5. **Technical report** — should incorporate the notebook's honest
-   limitations section (population bias, feature tradeoffs), not just
+3. **Deployment** — backend → Render, frontend → Vercel.
+4. **Technical report** — should incorporate both notebooks' honest
+   limitations sections (population bias, feature tradeoffs), not just
    describe features.
 
 ## 6. What "world-class" means for this project specifically

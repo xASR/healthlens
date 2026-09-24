@@ -12,10 +12,21 @@ const initialForm = {
   glucose: "",
   cholesterol_total: "",
   pregnancies: "0",
+  chest_pain_type: "typical_angina",
+  exercise_angina: false,
   smoker: false,
   physically_active: true,
   family_history: false,
 };
+
+// Mirrors the "cp" categories in the UCI Heart Disease dataset the heart
+// disease model is trained on (see predictor.py's CHEST_PAIN_TYPE_MAP).
+const chestPainOptions = [
+  { value: "typical_angina", label: "Typical angina (classic exertional chest pain)" },
+  { value: "atypical_angina", label: "Atypical angina (chest discomfort, not classic pattern)" },
+  { value: "non_anginal_pain", label: "Non-anginal pain (chest pain unrelated to the heart)" },
+  { value: "asymptomatic", label: "No chest pain" },
+];
 
 // Mirrors the ge/le bounds in backend/app/schemas/questionnaire.py --
 // client-side validation is a UX nicety, the backend is the real gate.
@@ -59,6 +70,8 @@ export default function Questionnaire() {
           "The prediction model isn't trained yet on the server. This is " +
             "expected until Week 3-4 model training is complete."
         );
+      } else if (err.response?.status === 422) {
+        setError(err.response.data?.detail || "Please check your answers and try again.");
       } else {
         setError("Something went wrong submitting your assessment. Please try again.");
       }
@@ -121,6 +134,37 @@ export default function Questionnaire() {
               applicable.
             </p>
           </div>
+        )}
+
+        {form.condition === "heart_disease" && (
+          <>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink">
+                Chest pain
+              </label>
+              <select
+                value={form.chest_pain_type}
+                onChange={(e) => update("chest_pain_type", e.target.value)}
+                className="w-full rounded-md border border-teal-100 bg-white px-3 py-2"
+              >
+                {chestPainOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={form.exercise_angina}
+                onChange={(e) => update("exercise_angina", e.target.checked)}
+              />
+              I get chest pain, pressure, or tightness during physical
+              exertion
+            </label>
+          </>
         )}
 
         <div className="grid grid-cols-2 gap-4">

@@ -26,8 +26,30 @@ class QuestionnaireInput(BaseModel):
         "collected for female users only, defaults to 0 otherwise.",
     )
 
+    # Heart disease model inputs (UCI Cleveland feature set). Both are
+    # required for condition="heart_disease" -- enforced in predictor.py's
+    # _to_feature_frame, not here, since this schema is shared across
+    # conditions. chest_pain_type maps to the UCI "cp" column; the trained
+    # model's "fbs" input is derived from `glucose` above (>120 mg/dL), not
+    # asked separately, to avoid a redundant question.
+    chest_pain_type: Literal[
+        "typical_angina", "atypical_angina", "non_anginal_pain", "asymptomatic"
+    ] | None = Field(
+        None,
+        description="Required for heart_disease. 'Asymptomatic' means no "
+        "chest pain at all, which is itself a real (and non-obvious) risk "
+        "category in this model.",
+    )
+    exercise_angina: bool = Field(
+        False,
+        description="Required for heart_disease: chest pain/tightness "
+        "brought on by physical exertion.",
+    )
+
     # Lifestyle factors -- keep these as simple booleans/ordinal scales so
-    # they map cleanly onto model features later.
+    # they map cleanly onto model features later. Not used by either
+    # trained model directly (no equivalent column in either source
+    # dataset) -- collected for the rule-based recommendation engine.
     smoker: bool = False
     physically_active: bool = True
     family_history: bool = False
