@@ -74,10 +74,15 @@ explainability (shows *why* a result came out the way it did, not just a score)
     token, so it 401'd every time. Fixed by fetching the PDF as an
     authenticated blob (`downloadReport` in `frontend/src/api/client.js`)
     instead of linking directly.
-- ⬜ **Not done yet:** live deployment, full E2E/UI test coverage (API-level
-  coverage is partial now — `/history` has real tests, `/assessments` and
-  `/auth/sync` still only have manual verification, not committed tests),
+- ⬜ **Not done yet:** live deployment, frontend E2E test coverage,
   technical report.
+
+- ✅ **API-level test coverage for the three routes that matter most:**
+  `/assessments` (both conditions, happy paths + validation + persistence
+  + auth enforcement), `/auth/sync` + `/auth/me` (creation, idempotency,
+  auth enforcement), `/history` (list + single-item + per-user scoping).
+  `backend/tests/test_assessments.py`, `test_auth.py`, `test_history.py`.
+  30/30 backend tests passing. Frontend E2E still not started.
 
 ## 3. Key decisions already made — don't relitigate these without a reason
 
@@ -124,8 +129,8 @@ healthlens/
 │   ├── ml/artifacts/       diabetes_model.joblib, heart_disease_model.joblib
 │   ├── recommendations/  rule engine — keys off whatever features the model used
 │   └── db/, schemas/, api/, core/
-├── backend/tests/         19 tests, incl. 10 against the REAL trained models
-│                          and 3 API-level tests against /history
+├── backend/tests/         30 tests: 10 against the REAL trained models,
+│                          14 API-level (assessments/auth/history), rest unit
 ├── ml-notebooks/          diabetes_model_training.ipynb, heart_disease_model_training.ipynb
 │                          (both executed, real plots) + download_heart_data.py
 ├── frontend/src/pages/    Login, Register, Questionnaire, Results, Dashboard
@@ -134,11 +139,8 @@ healthlens/
 
 ## 5. Roadmap — what's left, in priority order
 
-1. **Full test coverage** — `/history` now has real API-level tests
-   (`backend/tests/test_history.py`); `/assessments` and `/auth/sync` still
-   only have manual verification, not committed tests. Given the bugs
-   already found this way, prioritize this over polish elsewhere. Frontend
-   E2E still not started.
+1. **Frontend E2E coverage** — backend API-level tests are done; nothing
+   automated exercises the actual UI yet (Playwright/Cypress, or similar).
 2. **Deployment** — backend → Render, frontend → Vercel.
 3. **Technical report** — should incorporate both notebooks' honest
    limitations sections (population bias, feature tradeoffs), not just
