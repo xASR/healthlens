@@ -58,6 +58,19 @@ RULES: dict[str, list[dict]] = {
             ],
         }
     ],
+    "diastolic_bp": [
+        {
+            "trigger_if": lambda v: v >= 85,
+            "diet": [
+                "Reduce sodium intake; consider a DASH-style eating pattern "
+                "(fruits, vegetables, low-fat dairy).",
+            ],
+            "exercise": [
+                "Regular aerobic exercise can meaningfully lower blood "
+                "pressure over 4-8 weeks of consistency.",
+            ],
+        }
+    ],
     "cholesterol_total": [
         {
             "trigger_if": lambda v: v >= 200,

@@ -1,0 +1,69 @@
+{
+  "winner": "RandomForest",
+  "features": [
+    "pregnancies",
+    "glucose",
+    "diastolic_bp",
+    "bmi",
+    "age"
+  ],
+  "results": {
+    "LogisticRegression": {
+      "cv_roc_auc_mean": 0.8405,
+      "cv_roc_auc_std": 0.0156,
+      "test_roc_auc": 0.8037,
+      "test_accuracy": 0.7143,
+      "test_precision": 0.6,
+      "test_recall": 0.5556,
+      "test_f1": 0.5769,
+      "confusion_matrix": [
+        [
+          80,
+          20
+        ],
+        [
+          24,
+          30
+        ]
+      ]
+    },
+    "RandomForest": {
+      "cv_roc_auc_mean": 0.8328,
+      "cv_roc_auc_std": 0.0307,
+      "test_roc_auc": 0.8196,
+      "test_accuracy": 0.7468,
+      "test_precision": 0.6667,
+      "test_recall": 0.5556,
+      "test_f1": 0.6061,
+      "confusion_matrix": [
+        [
+          85,
+          15
+        ],
+        [
+          24,
+          30
+        ]
+      ]
+    },
+    "XGBoost": {
+      "cv_roc_auc_mean": 0.8148,
+      "cv_roc_auc_std": 0.0309,
+      "test_roc_auc": 0.8172,
+      "test_accuracy": 0.7532,
+      "test_precision": 0.66,
+      "test_recall": 0.6111,
+      "test_f1": 0.6346,
+      "confusion_matrix": [
+        [
+          83,
+          17
+        ],
+        [
+          21,
+          33
+        ]
+      ]
+    }
+  }
+}
