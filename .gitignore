@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+
+# Node
+node_modules/
+dist/
+
+# Env / secrets
+.env
+firebase-service-account.json
+
+# ML artifacts (large binaries, don't belong in git)
+backend/app/ml/artifacts/*.joblib
+
+# OS
+.DS_Store
+
+# Datasets
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
