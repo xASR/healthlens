@@ -2,18 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-sand-50 text-ink font-body antialiased;
+@layer base {
+  body {
+    @apply min-h-screen bg-canvas font-body text-ink antialiased;
+  }
+
+  /* Ambient color field behind the glass. A fixed pseudo-element instead of
+     background-attachment: fixed, which iOS Safari ignores. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(56rem 38rem at 8% -12%, rgba(62, 138, 124, 0.20), transparent 60%),
+      radial-gradient(48rem 34rem at 108% 8%, rgba(110, 150, 205, 0.16), transparent 60%),
+      radial-gradient(40rem 30rem at 50% 115%, rgba(62, 138, 124, 0.12), transparent 60%);
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Visible keyboard focus everywhere -- don't strip this for "cleanliness".
+     Form controls below draw their own focus ring instead. */
+  :focus-visible {
+    outline: 2px solid theme('colors.teal.600');
+    outline-offset: 2px;
+  }
 }
 
-h1,
-h2,
-h3 {
-  @apply font-display;
+@layer components {
+  .glass {
+    @apply rounded-3xl border border-white/60 bg-white/55 shadow-glass backdrop-blur-xl backdrop-saturate-150;
+  }
+
+  /* Grouped list, iOS Settings style: one glass slab, hairline rows. */
+  .glass-group {
+    @apply glass divide-y divide-ink/[0.06] overflow-hidden;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition duration-200 ease-apple hover:bg-teal-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 motion-reduce:transition-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/10 bg-white/70 px-5 py-2.5 text-sm font-medium text-teal-700 backdrop-blur-xl transition duration-200 ease-apple hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none;
+  }
 }
 
-/* Visible keyboard focus everywhere -- don't strip this for "cleanliness". */
-:focus-visible {
-  outline: 2px solid theme('colors.teal.600');
-  outline-offset: 2px;
+/* Browsers without backdrop-filter get a denser fill so text stays legible. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background-color: rgba(255, 255, 255, 0.88);
+  }
 }

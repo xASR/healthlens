@@ -13,9 +13,9 @@ export default function Navbar() {
   };
 
   return (
-    <header className="border-b border-teal-100 bg-sand-50">
+    <header className="sticky top-0 z-40 border-b border-white/50 bg-white/60 backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link to="/" className="font-display text-xl font-semibold text-teal-900">
+        <Link to="/" className="font-display text-xl font-semibold tracking-tight text-teal-900">
           HealthLens
         </Link>
         {user && (
@@ -28,7 +28,7 @@ export default function Navbar() {
             </Link>
             <button
               onClick={handleLogout}
-              className="rounded-md border border-teal-600 px-3 py-1.5 text-teal-700 hover:bg-teal-50"
+              className="rounded-full border border-ink/10 bg-white/70 px-4 py-1.5 text-teal-700 transition hover:bg-white"
             >
               Log out
             </button>

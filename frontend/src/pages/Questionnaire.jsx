@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { submitAssessment } from "../api/client";
+import {
+  FloatingInput,
+  SegmentedControl,
+  ChoiceList,
+  ToggleRow,
+} from "../components/ui/FormControls";
+import ColdStartNotice from "../components/ui/ColdStartNotice";
+import Spinner from "../components/ui/Spinner";
 
 const initialForm = {
   condition: "diabetes",
@@ -19,25 +27,64 @@ const initialForm = {
   family_history: false,
 };
 
+const conditionOptions = [
+  { value: "diabetes", label: "Type 2 diabetes" },
+  { value: "heart_disease", label: "Heart disease" },
+];
+
+const sexOptions = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+];
+
 // Mirrors the "cp" categories in the UCI Heart Disease dataset the heart
 // disease model is trained on (see predictor.py's CHEST_PAIN_TYPE_MAP).
 const chestPainOptions = [
-  { value: "typical_angina", label: "Typical angina (classic exertional chest pain)" },
-  { value: "atypical_angina", label: "Atypical angina (chest discomfort, not classic pattern)" },
-  { value: "non_anginal_pain", label: "Non-anginal pain (chest pain unrelated to the heart)" },
-  { value: "asymptomatic", label: "No chest pain" },
+  { value: "typical_angina", title: "Typical angina", detail: "Classic chest pain that comes on with exertion" },
+  { value: "atypical_angina", title: "Atypical angina", detail: "Chest discomfort that doesn't follow the classic pattern" },
+  { value: "non_anginal_pain", title: "Non-anginal pain", detail: "Chest pain unrelated to the heart" },
+  { value: "asymptomatic", title: "No chest pain", detail: "I don't get chest pain" },
 ];
 
 // Mirrors the ge/le bounds in backend/app/schemas/questionnaire.py --
 // client-side validation is a UX nicety, the backend is the real gate.
 const numericFields = {
-  age: { label: "Age (years)", min: 1, max: 120 },
-  bmi: { label: "BMI", min: 10, max: 80, step: "0.1" },
-  systolic_bp: { label: "Systolic blood pressure (mmHg)", min: 70, max: 250 },
-  diastolic_bp: { label: "Diastolic blood pressure (mmHg)", min: 40, max: 150 },
-  glucose: { label: "Fasting glucose (mg/dL)", min: 40, max: 500 },
-  cholesterol_total: { label: "Total cholesterol (mg/dL)", min: 100, max: 400 },
+  age: { label: "Age", unit: "years", min: 1, max: 120, inputMode: "numeric" },
+  bmi: { label: "BMI", min: 10, max: 80, step: "0.1", inputMode: "decimal" },
+  systolic_bp: { label: "Systolic BP", unit: "mmHg", min: 70, max: 250, inputMode: "numeric" },
+  diastolic_bp: { label: "Diastolic BP", unit: "mmHg", min: 40, max: 150, inputMode: "numeric" },
+  glucose: { label: "Fasting glucose", unit: "mg/dL", min: 40, max: 500, inputMode: "numeric" },
+  cholesterol_total: { label: "Total cholesterol", unit: "mg/dL", min: 100, max: 400, inputMode: "numeric" },
 };
+
+// FastAPI returns `detail` as a string for errors raised in route code, but
+// as an array of objects for Pydantic validation errors. Rendering the array
+// directly would crash React, so flatten it to text.
+function formatDetail(detail) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((d) => {
+        const field = d?.loc?.[d.loc.length - 1];
+        return field ? `${String(field).replace(/_/g, " ")}: ${d.msg}` : d?.msg;
+      })
+      .filter(Boolean)
+      .join(" ");
+  }
+  return "";
+}
+
+function Section({ title, description, children }) {
+  return (
+    <section className="glass space-y-5 p-5 sm:p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-ink">{title}</h2>
+        {description && <p className="mt-1 text-sm text-ink/60">{description}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default function Questionnaire() {
   const [form, setForm] = useState(initialForm);
@@ -66,12 +113,9 @@ export default function Questionnaire() {
       navigate(`/results/${result.assessment_id}`, { state: result });
     } catch (err) {
       if (err.response?.status === 503) {
-        setError(
-          "The prediction model isn't trained yet on the server. This is " +
-            "expected until Week 3-4 model training is complete."
-        );
+        setError("Screening for this condition is unavailable right now. Try again in a few minutes.");
       } else if (err.response?.status === 422) {
-        setError(err.response.data?.detail || "Please check your answers and try again.");
+        setError(formatDetail(err.response.data?.detail) || "Please check your answers and try again.");
       } else {
         setError("Something went wrong submitting your assessment. Please try again.");
       }
@@ -81,154 +125,127 @@ export default function Questionnaire() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="mb-1 text-3xl text-teal-900">Health questionnaire</h1>
-      <p className="mb-8 text-sm text-teal-700">
+    <main className="mx-auto max-w-2xl px-5 py-10 sm:px-6">
+      <h1 className="text-3xl font-semibold text-ink">Health questionnaire</h1>
+      <p className="mb-8 mt-2 text-[15px] text-ink/60">
         These are routine indicators from a basic checkup. Nothing here is
         stored anywhere except your private HealthLens history.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-ink">
-            Which condition would you like screened?
-          </label>
-          <select
+      <form onSubmit={handleSubmit} className="space-y-5" aria-busy={submitting}>
+        <Section title="Screening">
+          <SegmentedControl
+            name="condition"
+            legend="Condition to screen for"
+            options={conditionOptions}
             value={form.condition}
-            onChange={(e) => update("condition", e.target.value)}
-            className="w-full rounded-md border border-teal-100 bg-white px-3 py-2"
-          >
-            <option value="diabetes">Type 2 Diabetes</option>
-            <option value="heart_disease">Cardiovascular Disease</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-ink">Sex</label>
-          <select
+            onChange={(v) => update("condition", v)}
+          />
+          <SegmentedControl
+            name="sex"
+            legend="Sex"
+            options={sexOptions}
             value={form.sex}
-            onChange={(e) => update("sex", e.target.value)}
-            className="w-full rounded-md border border-teal-100 bg-white px-3 py-2"
-          >
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-          </select>
-        </div>
+            onChange={(v) => update("sex", v)}
+          />
 
-        {form.condition === "diabetes" && form.sex === "female" && (
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink">
-              Number of pregnancies
-            </label>
-            <input
+          {form.condition === "diabetes" && form.sex === "female" && (
+            <FloatingInput
+              id="pregnancies"
+              label="Number of pregnancies"
               type="number"
+              inputMode="numeric"
               min={0}
               max={20}
               value={form.pregnancies}
               onChange={(e) => update("pregnancies", e.target.value)}
-              className="w-full rounded-md border border-teal-100 bg-white px-3 py-2 focus:border-teal-400"
+              hint="The diabetes model was trained on female patients, where this is a known predictive factor. Enter 0 if not applicable."
             />
-            <p className="mt-1 text-xs text-teal-700">
-              Our diabetes model is trained on a dataset of female patients,
-              where this is a known predictive factor. Enter 0 if not
-              applicable.
-            </p>
-          </div>
-        )}
+          )}
 
-        {form.condition === "heart_disease" && (
-          <>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-ink">
-                Chest pain
-              </label>
-              <select
+          {form.condition === "heart_disease" && (
+            <>
+              <ChoiceList
+                name="chest_pain_type"
+                legend="Chest pain"
+                options={chestPainOptions}
                 value={form.chest_pain_type}
-                onChange={(e) => update("chest_pain_type", e.target.value)}
-                className="w-full rounded-md border border-teal-100 bg-white px-3 py-2"
-              >
-                {chestPainOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={form.exercise_angina}
-                onChange={(e) => update("exercise_angina", e.target.checked)}
+                onChange={(v) => update("chest_pain_type", v)}
               />
-              I get chest pain, pressure, or tightness during physical
-              exertion
-            </label>
-          </>
-        )}
+              <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white/60">
+                <ToggleRow
+                  id="exercise_angina"
+                  label="Chest pain during exertion"
+                  description="Pain, pressure, or tightness when physically active"
+                  checked={form.exercise_angina}
+                  onChange={(v) => update("exercise_angina", v)}
+                />
+              </div>
+            </>
+          )}
+        </Section>
 
-        <div className="grid grid-cols-2 gap-4">
-          {Object.entries(numericFields).map(([field, cfg]) => (
-            <div key={field}>
-              <label className="mb-1 block text-sm font-medium text-ink">
-                {cfg.label}
-              </label>
-              <input
+        <Section
+          title="Checkup numbers"
+          description="Use the most recent values from a checkup or lab report."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            {Object.entries(numericFields).map(([field, cfg]) => (
+              <FloatingInput
+                key={field}
+                id={field}
+                label={cfg.label}
+                unit={cfg.unit}
                 type="number"
                 required
+                inputMode={cfg.inputMode}
                 min={cfg.min}
                 max={cfg.max}
                 step={cfg.step || "1"}
                 value={form[field]}
                 onChange={(e) => update(field, e.target.value)}
-                className="w-full rounded-md border border-teal-100 bg-white px-3 py-2 focus:border-teal-400"
               />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Section>
 
-        <fieldset className="space-y-3">
-          <legend className="mb-1 text-sm font-medium text-ink">Lifestyle</legend>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+        <section>
+          <h2 className="mb-2 px-1 text-lg font-semibold text-ink">Lifestyle</h2>
+          <div className="glass-group">
+            <ToggleRow
+              id="smoker"
+              label="I currently smoke"
               checked={form.smoker}
-              onChange={(e) => update("smoker", e.target.checked)}
+              onChange={(v) => update("smoker", v)}
             />
-            I currently smoke
-          </label>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <ToggleRow
+              id="physically_active"
+              label="Physically active most weeks"
               checked={form.physically_active}
-              onChange={(e) => update("physically_active", e.target.checked)}
+              onChange={(v) => update("physically_active", v)}
             />
-            I'm physically active most weeks
-          </label>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
+            <ToggleRow
+              id="family_history"
+              label="Family history of this condition"
               checked={form.family_history}
-              onChange={(e) => update("family_history", e.target.checked)}
+              onChange={(v) => update("family_history", v)}
             />
-            Family history of this condition
-          </label>
-        </fieldset>
+          </div>
+        </section>
 
         {error && (
-          <p className="rounded-md bg-risk-high/10 px-3 py-2 text-sm text-risk-high">
+          <p role="alert" className="rounded-2xl border border-risk-high/20 bg-risk-high/10 px-4 py-3 text-sm text-risk-high">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-teal-600 py-2.5 font-medium text-white hover:bg-teal-700 disabled:opacity-60"
-        >
-          {submitting ? "Analyzing..." : "Get my risk assessment"}
+        <button type="submit" disabled={submitting} className="btn-primary h-12 w-full text-[15px]">
+          {submitting && <Spinner />}
+          {submitting ? "Analyzing…" : "Get my risk assessment"}
         </button>
+
+        <ColdStartNotice active={submitting} />
       </form>
-    </div>
+    </main>
   );
 }

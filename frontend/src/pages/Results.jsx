@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
 import { fetchAssessment, downloadReport } from "../api/client";
-
-const RISK_COLORS = {
-  low: "text-risk-low border-risk-low",
-  moderate: "text-risk-moderate border-risk-moderate",
-  high: "text-risk-high border-risk-high",
-};
+import RiskRing from "../components/results/RiskRing";
+import ShapImpactBars from "../components/results/ShapImpactBars";
+import RecommendationCards from "../components/results/RecommendationCards";
+import ClinicalDisclaimer from "../components/results/ClinicalDisclaimer";
+import ResultsSkeleton from "../components/results/ResultsSkeleton";
+import ColdStartNotice from "../components/ui/ColdStartNotice";
+import Spinner from "../components/ui/Spinner";
 
 export default function Results() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function Results() {
   const [data, setData] = useState(location.state || null);
   const [loading, setLoading] = useState(!location.state);
   const [error, setError] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
 
   useEffect(() => {
@@ -29,100 +31,91 @@ export default function Results() {
 
   const handleDownload = () => {
     setDownloadError("");
-    downloadReport(data.assessment_id).catch(() =>
-      setDownloadError("Couldn't download the PDF. Please try again.")
-    );
+    setDownloading(true);
+    downloadReport(data.assessment_id)
+      .catch(() => setDownloadError("Couldn't download the PDF. Please try again."))
+      .finally(() => setDownloading(false));
   };
 
-  if (loading) return <p className="p-10 text-teal-700">Loading results...</p>;
-  if (error) return <p className="p-10 text-risk-high">{error}</p>;
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-3xl px-5 py-10 sm:px-6" aria-busy="true">
+        <h1 className="mb-6 text-3xl font-semibold text-ink">Your assessment</h1>
+        <ColdStartNotice active={loading} className="mb-6" />
+        <ResultsSkeleton />
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="mx-auto max-w-3xl px-5 py-10 sm:px-6">
+        <div className="glass p-8 text-center">
+          <p className="text-[15px] font-medium text-risk-high">{error}</p>
+          <p className="mt-1 text-sm text-ink/60">
+            It may have been removed, or the link is incomplete.
+          </p>
+          <Link to="/dashboard" className="btn-secondary mt-5">
+            Back to dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   if (!data) return null;
 
-  const riskClass = RISK_COLORS[data.risk_label] || RISK_COLORS.moderate;
-
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="mb-6 text-3xl text-teal-900">Your assessment</h1>
+    <main className="mx-auto max-w-3xl space-y-8 px-5 py-10 sm:px-6">
+      <h1 className="text-3xl font-semibold text-ink">Your assessment</h1>
 
-      <div className={`mb-8 rounded-lg border-2 p-6 ${riskClass}`}>
-        <p className="text-sm uppercase tracking-wide opacity-80">
-          {data.condition.replace("_", " ")} risk
-        </p>
-        <p className="text-4xl font-semibold">
-          {(data.risk_score * 100).toFixed(0)}%
-        </p>
-        <p className="text-lg capitalize">{data.risk_label} risk</p>
-      </div>
-
-      <section className="mb-8">
-        <h2 className="mb-3 text-xl text-teal-900">What's driving this</h2>
-        <ul className="space-y-2">
-          {data.top_factors.map((f) => (
-            <li
-              key={f.feature}
-              className="flex items-center justify-between rounded-md border border-teal-100 bg-white px-4 py-3"
-            >
-              <span className="capitalize">{f.feature.replace(/_/g, " ")}</span>
-              <span className="text-sm text-teal-700">
-                value: {f.value} &middot; impact {f.impact > 0 ? "+" : ""}
-                {f.impact}
-              </span>
-            </li>
-          ))}
-        </ul>
+      <section className="glass p-6 sm:p-8" aria-label="Risk score">
+        <RiskRing
+          score={data.risk_score}
+          label={data.risk_label}
+          condition={data.condition}
+          note={data.recommendations?.urgency_note}
+        />
       </section>
 
-      <section className="mb-8">
-        <h2 className="mb-3 text-xl text-teal-900">Recommendations</h2>
-        <div className="space-y-4 rounded-md border border-teal-100 bg-white p-5">
-          <div>
-            <h3 className="text-sm font-semibold text-teal-800">Diet</h3>
-            <ul className="ml-4 list-disc text-sm text-ink">
-              {data.recommendations.diet.map((tip, i) => (
-                <li key={i}>{tip}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-teal-800">Exercise</h3>
-            <ul className="ml-4 list-disc text-sm text-ink">
-              {data.recommendations.exercise.map((tip, i) => (
-                <li key={i}>{tip}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-teal-800">
-              Suggested specialist
-            </h3>
-            <p className="text-sm text-ink">{data.recommendations.specialist}</p>
-          </div>
+      <section className="glass p-6 sm:p-8">
+        <h2 className="mb-5 text-xl font-semibold text-ink">What&apos;s driving this</h2>
+        <ShapImpactBars factors={data.top_factors} />
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-xl font-semibold text-ink">Recommendations</h2>
+        <RecommendationCards recommendations={data.recommendations} />
+      </section>
+
+      <ClinicalDisclaimer text={data.disclaimer} />
+
+      <div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="btn-secondary"
+          >
+            {downloading ? <Spinner /> : (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor"
+                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14" />
+              </svg>
+            )}
+            {downloading ? "Preparing PDF…" : "Download PDF"}
+          </button>
+          <Link to="/dashboard" className="btn-primary">
+            View dashboard
+          </Link>
         </div>
-      </section>
-
-      <p className="mb-8 text-xs italic text-teal-700">
-        {data.disclaimer ||
-          "HealthLens is a preliminary screening tool, not a medical diagnosis."}
-      </p>
-
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={handleDownload}
-          className="rounded-md border border-teal-600 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
-        >
-          Download PDF
-        </button>
-        <Link
-          to="/dashboard"
-          className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-        >
-          View dashboard
-        </Link>
+        {downloadError && (
+          <p role="alert" className="mt-3 text-sm text-risk-high">
+            {downloadError}
+          </p>
+        )}
       </div>
-      {downloadError && (
-        <p className="mt-2 text-sm text-risk-high">{downloadError}</p>
-      )}
-    </div>
+    </main>
   );
 }

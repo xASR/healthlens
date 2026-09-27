@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { warmUpServer } from "./api/warmup";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
@@ -10,6 +12,11 @@ import Results from "./pages/Results";
 import Dashboard from "./pages/Dashboard";
 
 export default function App() {
+  // Start waking the backend on first page load (see api/warmup.js).
+  useEffect(() => {
+    warmUpServer();
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
