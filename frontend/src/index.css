@@ -7,7 +7,10 @@
     @apply min-h-screen bg-canvas font-body text-ink antialiased;
   }
 
-  /* Ambient color field behind the glass. A fixed pseudo-element instead of
+  /* Ambient color field behind the glass. Blobs sit IN the visible frame
+     (not just off-canvas corners) so backdrop-blur has real color and
+     contrast to diffuse -- a glass panel over flat gray reads as "gray
+     card," not "glass." A fixed pseudo-element instead of
      background-attachment: fixed, which iOS Safari ignores. */
   body::before {
     content: "";
@@ -16,9 +19,11 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(56rem 38rem at 8% -12%, rgba(62, 138, 124, 0.20), transparent 60%),
-      radial-gradient(48rem 34rem at 108% 8%, rgba(110, 150, 205, 0.16), transparent 60%),
-      radial-gradient(40rem 30rem at 50% 115%, rgba(62, 138, 124, 0.12), transparent 60%);
+      radial-gradient(44rem 34rem at 14% 8%, rgba(45, 140, 122, 0.42), transparent 62%),
+      radial-gradient(40rem 32rem at 86% 6%, rgba(88, 130, 210, 0.34), transparent 60%),
+      radial-gradient(46rem 38rem at 20% 92%, rgba(230, 176, 82, 0.24), transparent 62%),
+      radial-gradient(50rem 40rem at 88% 96%, rgba(45, 140, 122, 0.30), transparent 62%),
+      linear-gradient(160deg, #EAF2F0 0%, #E7EEF4 55%, #EFEAE0 100%);
   }
 
   h1,

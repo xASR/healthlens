@@ -20,7 +20,7 @@ export default {
         },
         // Cool, faintly teal page canvas. Glass needs a background with
         // some color variation behind it to read as glass at all.
-        canvas: '#EEF3F2',
+        canvas: '#E9EFEE',
         risk: {
           low: '#2F9E6E',
           moderate: '#D98E2F',
